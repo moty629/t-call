@@ -1,21 +1,27 @@
 #!/bin/sh
-echo "Restricted user interface (placeholder)"
 
-POLICY="/etc/tcall/policy.yaml"
+RUNDIR="/var/run/tcall"
+REQ="$RUNDIR/user_request"
 
-echo "Welcome to Tcall (restricted session)"
-echo "Type commands. Privileged actions require admin approval."
-echo "Type 'exit' to leave."
+echo "Welcome to Tcall (supervised session)"
+echo "Type commands normally."
+echo "Use: sudo <command> to request admin approval."
+echo "Type 'exit' to quit."
 
 while true; do
     printf "tcall> "
-    read CMD
+    read -r CMD
 
-    [ "$CMD" = "exit" ] && break
+    [ "$CMD" = "exit" ] && exit 0
 
-    # Send command to supervisor
-    echo "$CMD" > /var/run/tcall/user_request
-    echo "Request sent to supervisor"
+    case "$CMD" in
+        sudo\ *)
+            REAL_CMD="${CMD#sudo }"
+            printf "%s|%s\n" "$(whoami)" "$REAL_CMD" > "$REQ"
+            echo "Privilege request sent to admin"
+            ;;
+        *)
+            printf "%s|%s\n" "$(whoami)" "$CMD" > "$REQ"
+            ;;
+    esac
 done
-
-
