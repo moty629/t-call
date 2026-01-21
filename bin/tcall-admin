@@ -1,24 +1,33 @@
 #!/bin/sh
-echo "Admin control interface (placeholder)"
 
-APPROVAL_PIPE="/var/run/tcall/pending_approval"
+APP="/var/run/tcall/pending_approval"
 LOG="/var/log/tcall/audit.log"
 
 echo "Admin attached to Tcall session"
 
 while true; do
-    if read CMD < "$APPROVAL_PIPE"; then
-        echo "Approval requested for: $CMD"
-        printf "Approve? (yes/no): "
+    if read -r LINE < "$APP"; then
+        USER="$(echo "$LINE" | cut -d'|' -f1)"
+        CMD="$(echo "$LINE" | cut -d'|' -f2-)"
+
+        echo "----------------------------------------"
+        echo "User requesting privilege : $USER"
+        echo "Command                  : $CMD"
+        echo "Approve? (yes/no): "
         read ANSWER
 
         if [ "$ANSWER" = "yes" ]; then
-            echo "$(date) | APPROVED | $CMD" >> "$LOG"
-            /usr/local/bin/tcall-exec "$CMD"
+            echo "Admin authentication required"
+            sudo -v || {
+                echo "Authentication failed"
+                echo "$(date) | DENIED | user=$USER cmd=$CMD" >> "$LOG"
+                continue
+            }
+
+            sudo sh -c "$CMD"
+            echo "$(date) | APPROVED | user=$USER cmd=$CMD" >> "$LOG"
         else
-            echo "$(date) | DENIED | $CMD" >> "$LOG"
+            echo "$(date) | DENIED | user=$USER cmd=$CMD" >> "$LOG"
         fi
     fi
 done
-
-
