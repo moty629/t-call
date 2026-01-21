@@ -1,1 +1,3 @@
+#!/bin/sh
+echo "Privileged executor (placeholder)"
 
