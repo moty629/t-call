@@ -1,3 +1,50 @@
 #!/bin/sh
-echo "Tcall installed"
+set -e
 
+GROUP="tcall"
+RUNDIR="/var/run/tcall"
+LOGDIR="/var/log/tcall"
+BIN_DIR="/usr/local/bin"
+SERVICE="tcall.service"
+
+echo "[tcall] Post-install started"
+
+# 1. Create group if missing
+if ! getent group "$GROUP" >/dev/null; then
+    groupadd "$GROUP"
+    echo "[tcall] Group created: $GROUP"
+fi
+
+# 2. Add invoking user to group (best-effort)
+if [ -n "$SUDO_USER" ]; then
+    usermod -aG "$GROUP" "$SUDO_USER" || true
+    echo "[tcall] Added $SUDO_USER to group $GROUP"
+fi
+
+# 3. Fix binary permissions
+chmod +x "$BIN_DIR"/tcall-*
+chown root:root "$BIN_DIR"/tcall-*
+
+# 4. Fix line endings (safe)
+sed -i 's/\r$//' "$BIN_DIR"/tcall-*
+
+# 5. Create runtime directories
+mkdir -p "$RUNDIR" "$LOGDIR"
+
+chown root:"$GROUP" "$RUNDIR" "$LOGDIR"
+chmod 770 "$RUNDIR" "$LOGDIR"
+
+# 6. Create runtime files
+touch "$RUNDIR/user_request" "$RUNDIR/pending_approval" "$LOGDIR/audit.log"
+
+chown root:"$GROUP" "$RUNDIR/user_request" "$RUNDIR/pending_approval" "$LOGDIR/audit.log"
+chmod 660 "$RUNDIR/user_request" "$RUNDIR/pending_approval" "$LOGDIR/audit.log"
+
+# 7. systemd reload & enable service
+systemctl daemon-reload || true
+systemctl enable "$SERVICE" || true
+systemctl restart "$SERVICE" || true
+
+echo "[tcall] Post-install completed"
+
+exit 0
