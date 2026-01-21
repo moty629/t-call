@@ -1,3 +1,9 @@
 #!/bin/sh
-echo "Tcall removed"
+set -e
 
+SERVICE="tcall.service"
+
+systemctl stop "$SERVICE" || true
+systemctl disable "$SERVICE" || true
+
+exit 0
