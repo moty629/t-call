@@ -1,1 +1,14 @@
+allow:
+  - df -h
+  - free -m
+  - systemctl status *
+
+require_approval:
+  - systemctl restart *
+  - systemctl stop *
+
+deny:
+  - reboot
+  - shutdown
+  - rm -rf /
 
