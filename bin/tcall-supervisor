@@ -1,3 +1,30 @@
 #!/bin/sh
 echo "Supervisor core logic (placeholder)"
 
+
+REQUEST_PIPE="/var/run/tcall/user_request"
+LOG="/var/log/tcall/audit.log"
+
+echo "Tcall supervisor started"
+
+mkdir -p /var/run/tcall /var/log/tcall
+touch "$REQUEST_PIPE" "$LOG"
+
+while true; do
+    if read CMD < "$REQUEST_PIPE"; then
+        echo "$(date) | USER_REQUEST | $CMD" >> "$LOG"
+
+        # Simple policy decision
+        case "$CMD" in
+            df*|free*|uptime*)
+                sh -c "$CMD" >> "$LOG" 2>&1
+                ;;
+            *)
+                echo "$(date) | REQUIRES_APPROVAL | $CMD" >> "$LOG"
+                echo "$CMD" > /var/run/tcall/pending_approval
+                ;;
+        esac
+    fi
+done
+
+
