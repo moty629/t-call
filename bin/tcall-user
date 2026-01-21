@@ -1,3 +1,21 @@
 #!/bin/sh
 echo "Restricted user interface (placeholder)"
 
+POLICY="/etc/tcall/policy.yaml"
+
+echo "Welcome to Tcall (restricted session)"
+echo "Type commands. Privileged actions require admin approval."
+echo "Type 'exit' to leave."
+
+while true; do
+    printf "tcall> "
+    read CMD
+
+    [ "$CMD" = "exit" ] && break
+
+    # Send command to supervisor
+    echo "$CMD" > /var/run/tcall/user_request
+    echo "Request sent to supervisor"
+done
+
+
