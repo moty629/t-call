@@ -1,3 +1,10 @@
 #!/bin/sh
 echo "Privileged executor (placeholder)"
 
+LOG="/var/log/tcall/audit.log"
+CMD="$*"
+
+echo "$(date) | EXECUTING_AS_ROOT | $CMD" >> "$LOG"
+sh -c "$CMD" >> "$LOG" 2>&1
+
+
