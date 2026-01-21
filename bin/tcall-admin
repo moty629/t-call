@@ -1,3 +1,24 @@
 #!/bin/sh
 echo "Admin control interface (placeholder)"
 
+APPROVAL_PIPE="/var/run/tcall/pending_approval"
+LOG="/var/log/tcall/audit.log"
+
+echo "Admin attached to Tcall session"
+
+while true; do
+    if read CMD < "$APPROVAL_PIPE"; then
+        echo "Approval requested for: $CMD"
+        printf "Approve? (yes/no): "
+        read ANSWER
+
+        if [ "$ANSWER" = "yes" ]; then
+            echo "$(date) | APPROVED | $CMD" >> "$LOG"
+            /usr/local/bin/tcall-exec "$CMD"
+        else
+            echo "$(date) | DENIED | $CMD" >> "$LOG"
+        fi
+    fi
+done
+
+
