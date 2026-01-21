@@ -3,7 +3,6 @@ Description=Tcall Supervisor Service
 After=network.target
 
 [Service]
-Type=simple
 ExecStart=/usr/local/bin/tcall-supervisor
 Restart=always
 
