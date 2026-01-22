@@ -5,25 +5,34 @@ PKG="tcall"
 VER="0.1"
 ARCH="all"
 BUILD="/tmp/${PKG}_${VER}"
-OUT="${PKG}_${VER}_${ARCH}.deb"
 
-rm -rf "$BUILD"
+rm -rf "$BUILD" *.deb
 
 mkdir -p "$BUILD/DEBIAN"
 mkdir -p "$BUILD/usr/local/bin"
+mkdir -p "$BUILD/etc/profile.d"
+mkdir -p "$BUILD/etc/tcall"
 mkdir -p "$BUILD/etc/systemd/system"
 
+# debian metadata
 cp debian/control "$BUILD/DEBIAN/control"
 cp debian/postinst "$BUILD/DEBIAN/postinst"
 cp debian/prerm "$BUILD/DEBIAN/prerm"
+chmod 755 "$BUILD/DEBIAN/"*
 
-chmod 755 "$BUILD/DEBIAN/postinst" "$BUILD/DEBIAN/prerm"
-
+# binaries
 cp bin/* "$BUILD/usr/local/bin/"
-chmod 755 "$BUILD/usr/local/bin/"*
+cp tcall "$BUILD/usr/local/bin/"
 
-cp systemd/tcall.service "$BUILD/etc/systemd/system/"
+# policy
+cp policy.txt "$BUILD/etc/tcall/policy.txt"
 
-dpkg-deb --build "$BUILD" "$OUT"
+# profile hook
+cp profile.d/tcall.sh "$BUILD/etc/profile.d/tcall.sh"
 
-echo "Package built: $OUT"
+# systemd
+cp systemd/tcall.service "$BUILD/etc/systemd/system/tcall.service"
+
+dpkg-deb --build "$BUILD" "${PKG}_${VER}_${ARCH}.deb"
+
+echo "Built ${PKG}_${VER}_${ARCH}.deb"
