@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "purge" ]; then
+  rm -rf /var/run/tcall
+  rm -rf /var/log/tcall
+  rm -rf /etc/tcall
+  rm -f /etc/profile.d/tcall.sh
+  systemctl daemon-reload || true
+fi
+
+exit 0
