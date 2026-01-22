@@ -2,49 +2,41 @@
 set -e
 
 GROUP="tcall"
+BINDIR="/usr/local/bin"
 RUNDIR="/var/run/tcall"
 LOGDIR="/var/log/tcall"
-BIN_DIR="/usr/local/bin"
-SERVICE="tcall.service"
+ETCDIR="/etc/tcall"
 
-echo "[tcall] Post-install started"
+# group
+getent group "$GROUP" >/dev/null || groupadd "$GROUP"
 
-# 1. Create group if missing
-if ! getent group "$GROUP" >/dev/null; then
-    groupadd "$GROUP"
-    echo "[tcall] Group created: $GROUP"
-fi
-
-# 2. Add invoking user to group (best-effort)
+# add installing admin
 if [ -n "$SUDO_USER" ]; then
-    usermod -aG "$GROUP" "$SUDO_USER" || true
-    echo "[tcall] Added $SUDO_USER to group $GROUP"
+  usermod -aG "$GROUP" "$SUDO_USER" || true
 fi
 
-# 3. Fix binary permissions
-chmod +x "$BIN_DIR"/tcall-*
-chown root:root "$BIN_DIR"/tcall-*
-
-# 4. Fix line endings (safe)
-sed -i 's/\r$//' "$BIN_DIR"/tcall-*
-
-# 5. Create runtime directories
-mkdir -p "$RUNDIR" "$LOGDIR"
-
+# runtime dirs
+mkdir -p "$RUNDIR" "$LOGDIR" "$ETCDIR"
 chown root:"$GROUP" "$RUNDIR" "$LOGDIR"
 chmod 770 "$RUNDIR" "$LOGDIR"
 
-# 6. Create runtime files
 touch "$RUNDIR/user_request" "$RUNDIR/pending_approval" "$LOGDIR/audit.log"
+chown root:"$GROUP" "$RUNDIR/"* "$LOGDIR/audit.log"
+chmod 660 "$RUNDIR/"* "$LOGDIR/audit.log"
 
-chown root:"$GROUP" "$RUNDIR/user_request" "$RUNDIR/pending_approval" "$LOGDIR/audit.log"
-chmod 660 "$RUNDIR/user_request" "$RUNDIR/pending_approval" "$LOGDIR/audit.log"
+# policy
+cp /etc/tcall/policy.txt /etc/tcall/policy.txt 2>/dev/null || true
 
-# 7. systemd reload & enable service
+# binaries
+chmod 755 "$BINDIR"/tcall*
+chown root:root "$BINDIR"/tcall*
+
+# profile enforcement
+chmod 755 /etc/profile.d/tcall.sh
+
+# systemd
 systemctl daemon-reload || true
-systemctl enable "$SERVICE" || true
-systemctl restart "$SERVICE" || true
-
-echo "[tcall] Post-install completed"
+systemctl enable tcall.service || true
+systemctl restart tcall.service || true
 
 exit 0
