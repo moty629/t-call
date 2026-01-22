@@ -1,45 +1,69 @@
 #!/bin/sh
 
 RUNDIR="/var/run/tcall"
-APP="$RUNDIR/pending_approval"
+REQ="$RUNDIR/pending_approval"
 LOG="/var/log/tcall/audit.log"
+POLICY="/etc/tcall/policy.txt"
+TIMEOUT=3600   # 1 hour
 
-mkdir -p "$RUNDIR" /var/log/tcall
+mkdir -p "$RUNDIR" /var/log/tcall /etc/tcall
 
 echo "Tcall Admin Console"
 
 while true; do
-    echo
-    echo "1) Start session for user"
-    echo "2) Stop session for user"
-    echo "3) Monitor approvals"
-    echo "4) Exit"
-    printf "Choice: "
-    read CHOICE
+  echo
+  echo "1) Start session"
+  echo "2) Stop session"
+  echo "3) Watch log"
+  echo "4) Approve sudo requests"
+  echo "5) Exit"
+  printf "Choice: "
+  read CH
 
-    case "$CHOICE" in
-        1)
-            printf "Username: "
-            read USER
-            id "$USER" >/dev/null 2>&1 || { echo "Invalid user"; continue; }
-            touch "$RUNDIR/session_$USER"
-            chown root:tcall "$RUNDIR/session_$USER"
-            chmod 660 "$RUNDIR/session_$USER"
-            echo "$(date) | ADMIN_START | user=$USER" >> "$LOG"
-            echo "Session started for $USER"
-            ;;
-        2)
-            printf "Username: "
-            read USER
-            rm -f "$RUNDIR/session_$USER"
-            echo "$(date) | ADMIN_STOP | user=$USER" >> "$LOG"
-            echo "Session stopped for $USER"
-            ;;
-        3)
-            tail -f "$LOG"
-            ;;
-        4)
-            exit 0
-            ;;
-    esac
+  case "$CH" in
+    1)
+      printf "User: "
+      read U
+      id "$U" >/dev/null 2>&1 || { echo "Invalid user"; continue; }
+      EXP=$(( $(date +%s) + TIMEOUT ))
+      echo "$EXP" > "$RUNDIR/session_$U"
+      chown root:tcall "$RUNDIR/session_$U"
+      chmod 660 "$RUNDIR/session_$U"
+      echo "$(date) | ADMIN_START | user=$U exp=$EXP" >> "$LOG"
+      ;;
+    2)
+      printf "User: "
+      read U
+      rm -f "$RUNDIR/session_$U"
+      echo "$(date) | ADMIN_STOP | user=$U" >> "$LOG"
+      ;;
+    3)
+      tail -f "$LOG"
+      ;;
+    4)
+      if read -r LINE < "$REQ"; then
+        USER=$(echo "$LINE" | cut -d'|' -f1)
+        CMD=$(echo "$LINE" | cut -d'|' -f2-)
+
+        echo "Request from $USER : $CMD"
+        echo "Approve? (yes/no)"
+        read A
+
+        if [ "$A" = "yes" ]; then
+          if grep -Fxq "$CMD" "$POLICY" 2>/dev/null; then
+            sudo sh -c "$CMD"
+            echo "$(date) | APPROVED | user=$USER cmd=$CMD" >> "$LOG"
+          else
+            echo "Policy denied"
+            echo "$(date) | POLICY_DENY | user=$USER cmd=$CMD" >> "$LOG"
+          fi
+        else
+          echo "$(date) | DENIED | user=$USER cmd=$CMD" >> "$LOG"
+        fi
+      fi
+      ;;
+    5)
+      exit 0
+      ;;
+  esac
 done
