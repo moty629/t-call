@@ -3,6 +3,6 @@ Version: 0.1
 Section: admin
 Priority: optional
 Architecture: all
-Maintainer: Tcall Project
-Description: Supervised Linux session gateway with admin takeover
-
+Depends: bash, sudo, util-linux, coreutils
+Maintainer: Tcall <admin@localhost>
+Description: Admin-brokered privileged command execution system
