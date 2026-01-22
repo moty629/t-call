@@ -1,0 +1,27 @@
+name: Build T-call Debian Package
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install deps
+      run: sudo apt-get update && sudo apt-get install -y dpkg-dev
+
+    - name: Build deb
+      run: |
+        chmod +x packaging/build-deb.sh
+        ./packaging/build-deb.sh
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: tcall-deb
+        path: "*.deb"
