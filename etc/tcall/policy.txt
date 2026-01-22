@@ -1,0 +1,4 @@
+systemctl restart nginx
+journalctl -u nginx
+df -h
+uptime
