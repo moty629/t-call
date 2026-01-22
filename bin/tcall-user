@@ -1,27 +1,37 @@
 #!/bin/sh
 
 RUNDIR="/var/run/tcall"
+USER="$(whoami)"
+SESSION="$RUNDIR/session_$USER"
 REQ="$RUNDIR/user_request"
+LOG="/var/log/tcall/audit.log"
 
-echo "Welcome to Tcall (supervised session)"
-echo "Type commands normally."
-echo "Use: sudo <command> to request admin approval."
-echo "Type 'exit' to quit."
+[ -f "$SESSION" ] || {
+  echo "Access denied. Admin has not started a session."
+  exit 1
+}
+
+echo "Welcome to Tcall (admin-initiated session)"
+echo "Normal commands run normally"
+echo "Use: sudo <command> to request admin approval"
+echo "Type exit to quit"
 
 while true; do
     printf "tcall> "
-    read -r CMD
+    read -r CMD || exit 0
 
     [ "$CMD" = "exit" ] && exit 0
+
+    echo "$(date) | USER_CMD | user=$USER cmd=$CMD" >> "$LOG"
 
     case "$CMD" in
         sudo\ *)
             REAL_CMD="${CMD#sudo }"
-            printf "%s|%s\n" "$(whoami)" "$REAL_CMD" > "$REQ"
+            printf "%s|%s\n" "$USER" "$REAL_CMD" > "$REQ"
             echo "Privilege request sent to admin"
             ;;
         *)
-            printf "%s|%s\n" "$(whoami)" "$CMD" > "$REQ"
+            sh -c "$CMD"
             ;;
     esac
 done
