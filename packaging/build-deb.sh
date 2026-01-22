@@ -19,6 +19,9 @@ cp debian/control "$BUILD/DEBIAN/control"
 cp debian/postinst "$BUILD/DEBIAN/postinst"
 cp debian/prerm "$BUILD/DEBIAN/prerm"
 chmod 755 "$BUILD/DEBIAN/"*
+cp debian/postrm "$BUILD/DEBIAN/postrm"
+chmod 755 "$BUILD/DEBIAN/postrm"
+
 
 # binaries
 cp bin/* "$BUILD/usr/local/bin/"
