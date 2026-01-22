@@ -2,25 +2,16 @@
 set -e
 
 RUNDIR="/var/run/tcall"
-REQ="$RUNDIR/user_request"
-APP="$RUNDIR/pending_approval"
 LOG="/var/log/tcall/audit.log"
 
 mkdir -p "$RUNDIR" /var/log/tcall
 chown root:tcall "$RUNDIR" /var/log/tcall
 chmod 770 "$RUNDIR" /var/log/tcall
 
-touch "$REQ" "$APP" "$LOG"
-chown root:tcall "$REQ" "$APP" "$LOG"
-chmod 660 "$REQ" "$APP" "$LOG"
+touch "$RUNDIR/user_request" "$RUNDIR/pending_approval" "$LOG"
+chown root:tcall "$RUNDIR/"* "$LOG"
+chmod 660 "$RUNDIR/"* "$LOG"
 
 echo "$(date) | SUPERVISOR_STARTED" >> "$LOG"
 
-while true; do
-    if read -r LINE < "$REQ"; then
-        USER="$(echo "$LINE" | cut -d'|' -f1)"
-        CMD="$(echo "$LINE" | cut -d'|' -f2-)"
-        echo "$(date) | SUDO_REQUEST | user=$USER cmd=$CMD" >> "$LOG"
-        printf "%s|%s\n" "$USER" "$CMD" > "$APP"
-    fi
-done
+while true; do sleep 60; done
