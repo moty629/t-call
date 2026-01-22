@@ -6,32 +6,31 @@ SESSION="$RUNDIR/session_$USER"
 REQ="$RUNDIR/user_request"
 LOG="/var/log/tcall/audit.log"
 
-[ -f "$SESSION" ] || {
-  echo "Access denied. Admin has not started a session."
-  exit 1
-}
+[ -f "$SESSION" ] || { echo "No active admin session"; exit 1; }
 
-echo "Welcome to Tcall (admin-initiated session)"
-echo "Normal commands run normally"
-echo "Use: sudo <command> to request admin approval"
-echo "Type exit to quit"
+EXP=$(cat "$SESSION")
+NOW=$(date +%s)
+
+[ "$NOW" -gt "$EXP" ] && { echo "Session expired"; exit 1; }
+
+echo "Tcall session active (single-admin controlled)"
 
 while true; do
-    printf "tcall> "
-    read -r CMD || exit 0
+  printf "tcall> "
+  read -r CMD || exit 0
 
-    [ "$CMD" = "exit" ] && exit 0
+  [ "$CMD" = "exit" ] && exit 0
 
-    echo "$(date) | USER_CMD | user=$USER cmd=$CMD" >> "$LOG"
+  echo "$(date) | CMD | user=$USER cmd=$CMD" >> "$LOG"
 
-    case "$CMD" in
-        sudo\ *)
-            REAL_CMD="${CMD#sudo }"
-            printf "%s|%s\n" "$USER" "$REAL_CMD" > "$REQ"
-            echo "Privilege request sent to admin"
-            ;;
-        *)
-            sh -c "$CMD"
-            ;;
-    esac
+  case "$CMD" in
+    sudo\ *)
+      REAL="${CMD#sudo }"
+      printf "%s|%s\n" "$USER" "$REAL" > "$REQ"
+      echo "Sent to admin for approval"
+      ;;
+    *)
+      /usr/bin/script -q -c "$CMD" /var/log/tcall/session_$USER.log
+      ;;
+  esac
 done
