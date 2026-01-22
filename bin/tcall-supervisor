@@ -2,45 +2,25 @@
 set -e
 
 RUNDIR="/var/run/tcall"
-LOGDIR="/var/log/tcall"
-
 REQ="$RUNDIR/user_request"
 APP="$RUNDIR/pending_approval"
-LOG="$LOGDIR/audit.log"
+LOG="/var/log/tcall/audit.log"
 
-# --- Runtime setup ---
-mkdir -p "$RUNDIR" "$LOGDIR"
+mkdir -p "$RUNDIR" /var/log/tcall
+chown root:tcall "$RUNDIR" /var/log/tcall
+chmod 770 "$RUNDIR" /var/log/tcall
 
-chown root:tcall "$RUNDIR" "$LOGDIR"
-chmod 770 "$RUNDIR"
-chmod 770 "$LOGDIR"
-
-[ -f "$REQ" ] || touch "$REQ"
-[ -f "$APP" ] || touch "$APP"
-[ -f "$LOG" ] || touch "$LOG"
-
+touch "$REQ" "$APP" "$LOG"
 chown root:tcall "$REQ" "$APP" "$LOG"
 chmod 660 "$REQ" "$APP" "$LOG"
 
 echo "$(date) | SUPERVISOR_STARTED" >> "$LOG"
 
-# --- Main loop ---
 while true; do
     if read -r LINE < "$REQ"; then
         USER="$(echo "$LINE" | cut -d'|' -f1)"
         CMD="$(echo "$LINE" | cut -d'|' -f2-)"
-
-        echo "$(date) | REQUEST | user=$USER cmd=$CMD" >> "$LOG"
-
-        case "$CMD" in
-            df*|free*|uptime*)
-                echo "$(date) | ALLOWED | user=$USER cmd=$CMD" >> "$LOG"
-                sh -c "$CMD" >> "$LOG" 2>&1
-                ;;
-            *)
-                printf "%s|%s\n" "$USER" "$CMD" > "$APP"
-                echo "$(date) | REQUIRES_ADMIN | user=$USER cmd=$CMD" >> "$LOG"
-                ;;
-        esac
+        echo "$(date) | SUDO_REQUEST | user=$USER cmd=$CMD" >> "$LOG"
+        printf "%s|%s\n" "$USER" "$CMD" > "$APP"
     fi
 done
