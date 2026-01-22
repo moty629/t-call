@@ -1,33 +1,45 @@
 #!/bin/sh
 
-APP="/var/run/tcall/pending_approval"
+RUNDIR="/var/run/tcall"
+APP="$RUNDIR/pending_approval"
 LOG="/var/log/tcall/audit.log"
 
-echo "Admin attached to Tcall session"
+mkdir -p "$RUNDIR" /var/log/tcall
+
+echo "Tcall Admin Console"
 
 while true; do
-    if read -r LINE < "$APP"; then
-        USER="$(echo "$LINE" | cut -d'|' -f1)"
-        CMD="$(echo "$LINE" | cut -d'|' -f2-)"
+    echo
+    echo "1) Start session for user"
+    echo "2) Stop session for user"
+    echo "3) Monitor approvals"
+    echo "4) Exit"
+    printf "Choice: "
+    read CHOICE
 
-        echo "----------------------------------------"
-        echo "User requesting privilege : $USER"
-        echo "Command                  : $CMD"
-        echo "Approve? (yes/no): "
-        read ANSWER
-
-        if [ "$ANSWER" = "yes" ]; then
-            echo "Admin authentication required"
-            sudo -v || {
-                echo "Authentication failed"
-                echo "$(date) | DENIED | user=$USER cmd=$CMD" >> "$LOG"
-                continue
-            }
-
-            sudo sh -c "$CMD"
-            echo "$(date) | APPROVED | user=$USER cmd=$CMD" >> "$LOG"
-        else
-            echo "$(date) | DENIED | user=$USER cmd=$CMD" >> "$LOG"
-        fi
-    fi
+    case "$CHOICE" in
+        1)
+            printf "Username: "
+            read USER
+            id "$USER" >/dev/null 2>&1 || { echo "Invalid user"; continue; }
+            touch "$RUNDIR/session_$USER"
+            chown root:tcall "$RUNDIR/session_$USER"
+            chmod 660 "$RUNDIR/session_$USER"
+            echo "$(date) | ADMIN_START | user=$USER" >> "$LOG"
+            echo "Session started for $USER"
+            ;;
+        2)
+            printf "Username: "
+            read USER
+            rm -f "$RUNDIR/session_$USER"
+            echo "$(date) | ADMIN_STOP | user=$USER" >> "$LOG"
+            echo "Session stopped for $USER"
+            ;;
+        3)
+            tail -f "$LOG"
+            ;;
+        4)
+            exit 0
+            ;;
+    esac
 done
